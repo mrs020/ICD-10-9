@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ค้นหา ICD-10/9 - ระบบวินิจฉัยโรคออนไลน์</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Sarabun', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 30%, #90caf9 70%, #64b5f6 100%);
+            min-height: 100vh;
+            color: #1565c0;
+            line-height: 1.6;
+        }
+
+        .medical-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="medical" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M18,15 L22,15 L22,18 L25,18 L25,22 L22,22 L22,25 L18,25 L18,22 L15,22 L15,18 L18,18 Z" fill="rgba(21,101,192,0.05)" stroke="rgba(21,101,192,0.1)" stroke-width="0.5"/><circle cx="30" cy="30" r="2" fill="rgba(21,101,192,0.03)"/></pattern></defs><rect width="100" height="100" fill="url(%23medical)"/></svg>') repeat,
+                radial-gradient(circle at 25% 75%, rgba(255,255,255,0.15) 0%, transparent 50%),
+                radial-gradient(circle at 75% 25%, rgba(255,255,255,0.1) 0%, transparent 50%);
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0d47a1 0%, #1565c0 50%, #1976d2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 25px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(13, 71, 161, 0.3);
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+            animation: shimmer 4s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .medical-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            color: #81d4fa;
+            text-shadow: 0 0 20px rgba(129, 212, 250, 0.5);
+            animation: pulse 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { 
+                transform: scale(1);
+                text-shadow: 0 0 20px rgba(129, 212, 250, 0.5);
+            }
+            to { 
+                transform: scale(1.05);
+                text-shadow: 0 0 30px rgba(129, 212, 250, 0.8), 0 0 40px rgba(129, 212, 250, 0.6);
+            }
+        }
+
+        .header h1 {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .search-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(15px);
+            border-radius: 25px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(13, 71, 161, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .search-container {
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 20px 60px 20px 20px;
+            font-size: 18px;
+            border: 3px solid #e3f2fd;
+            border-radius: 50px;
+            background: white;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(13, 71, 161, 0.1);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #1565c0;
+            box-shadow: 0 10px 30px rgba(21, 101, 192, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .search-btn {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-50%) scale(1.05);
+            box-shadow: 0 5px 15px rgba(21, 101, 192, 0.3);
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .filter-tab {
+            padding: 12px 25px;
+            background: white;
+            border: 2px solid #e3f2fd;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: #1565c0;
+        }
+
+        .filter-tab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(21, 101, 192, 0.1);
+        }
+
+        .filter-tab.active {
+            background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
+            color: white;
+            border-color: #1565c0;
+            box-shadow: 0 5px 15px rgba(21, 101, 192, 0.3);
+        }
+
+        .search-suggestions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .suggestion-item {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            padding: 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid #1565c0;
+        }
+
+        .suggestion-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(21, 101, 192, 0.15);
+            background: linear-gradient(135deg, #bbdefb 0%, #e1bee7 100%);
+        }
+
+        .results-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(15px);
+            border-radius: 25px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(13, 71, 161, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: none;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .results-count {
+            font-size: 18px;
+            color: #1565c0;
+            font-weight: 600;
+        }
+
+        .sort-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .sort-btn {
+            padding: 8px 15px;
+            background: white;
+            border: 2px solid #e3f2fd;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            color: #1565c0;
+        }
+
+        .sort-btn:hover, .sort-btn.active {
+            background: #1565c0;
+            color: white;
+            border-color: #1565c0;
+        }
+
+        .result-item {
+            background: white;
+            border: 2px solid #e3f2fd;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 5px;
+            background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .result-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(21, 101, 192, 0.15);
+            border-color: #1565c0;
+        }
+
+        .result-item:hover::before {
+            transform: scaleY(1);
+        }
+
+        .icd-code {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0d47a1;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icd-version {
+            background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .disease-name-en {
+            font-size: 18px;
+            color: #1565c0;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .disease-name-th {
+            font-size: 16px;
+            color: #424242;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .disease-category {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 8px 15px;
+            border-radius: 20px;
+            display: inline-block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .disease-description {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .related-symptoms {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 15px;
+            margin-top: 15px;
+        }
+
+        .related-symptoms h4 {
+            color: #1565c0;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .symptoms-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .symptom-tag {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 13px;
+        }
+
+        .copy-code {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .copy-code:hover {
+            background: #45a049;
+            transform: scale(1.05);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #1565c0;
+        }
+
+        .loading i {
+            font-size: 48px;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px;
+            color: #666;
+        }
+
+        .no-results i {
+            font-size: 64px;
+            color: #e0e0e0;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .header {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 28px;
+            }
+
+            .search-section, .results-section {
+                padding: 25px 20px;
+            }
+
+            .filter-tabs {
+                justify-content: flex-start;
+                overflow-x: auto;
+                padding-bottom: 10px;
+            }
+
+            .filter-tab {
+                flex-shrink: 0;
+            }
+
+            .results-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .icd-code {
+                font-size: 20px;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { 
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="medical-bg"></div>
+    
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <div class="medical-icon">
+                    <i class="fas fa-user-md"></i>
+                </div>
+                <h1>ระบบค้นหา ICD-10/9</h1>
+                <p>International Classification of Diseases - ระบบจำแนกโรคสากล</p>
+            </div>
+        </div>
+
+        <div class="search-section">
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    class="search-input" 
+                    id="searchInput"
+                    placeholder="ค้นหารหัส ICD, ชื่อโรค, อาการ หรือคำย่อ (ภาษาไทย/อังกฤษ)..."
+                    autocomplete="off"
+                >
+                <button class="search-btn" onclick="searchICD()">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+
+            <div class="filter-tabs">
+                <div class="filter-tab active" onclick="setFilter('all')" data-filter="all">
+                    <i class="fas fa-list"></i> ทั้งหมด
+                </div>
+                <div class="filter-tab" onclick="setFilter('icd10')" data-filter="icd10">
+                    <i class="fas fa-code"></i> ICD-10
+                </div>
+                <div class="filter-tab" onclick="setFilter('icd9')" data-filter="icd9">
+                    <i class="fas fa-code-branch"></i> ICD-9
+                </div>
+                <div class="filter-tab" onclick="setFilter('symptoms')" data-filter="symptoms">
+                    <i class="fas fa-stethoscope"></i> อาการ
+                </div>
+                <div class="filter-tab" onclick="setFilter('categories')" data-filter="categories">
+                    <i class="fas fa-sitemap"></i> หมวดหมู่
+                </div>
+            </div>
+
+            <div class="search-suggestions">
+                <div class="suggestion-item" onclick="searchSuggestion('เบาหวาน')">
+                    <i class="fas fa-search"></i> เบาหวาน (Diabetes)
+                </div>
+                <div class="suggestion-item" onclick="searchSuggestion('ความดันโลหิตสูง')">
+                    <i class="fas fa-search"></i> ความดันโลหิตสูง (Hypertension)
+                </div>
+                <div class="suggestion-item" onclick="searchSuggestion('ปอดบวม')">
+                    <i class="fas fa-search"></i> ปอดบวม (Pneumonia)
+                </div>
+                <div class="suggestion-item" onclick="searchSuggestion('ปวดหัว')">
+                    <i class="fas fa-search"></i> ปวดหัว (Headache)
+                </div>
+                <div class="suggestion-item" onclick="searchSuggestion('COVID-19')">
+                    <i class="fas fa-search"></i> COVID-19
+                </div>
+                <div class="suggestion-item" onclick="searchSuggestion('มะเร็ง')">
+                    <i class="fas fa-search"></i> มะเร็ง (Cancer)
+                </div>
+            </div>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <div class="results-header">
+                <div class="results-count" id="resultsCount">
+                    พบผลลัพธ์ 0 รายการ
+                </div>
+                <div class="sort-controls">
+                    <span style="color: #666; margin-right: 10px;">เรียงตาม:</span>
+                    <button class="sort-btn active" onclick="sortResults('relevance')">ความเกี่ยวข้อง</button>
+                    <button class="sort-btn" onclick="sortResults('code')">รหัส ICD</button>
+                    <button class="sort-btn" onclick="sortResults('name')">ชื่อโรค</button>
+                </div>
+            </div>
+            
+            <div id="searchResults">
+                <!-- Results will be displayed here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+       const icdDatabase = [
+    {
+        code: "E11",
+        version: "ICD-10",
+        nameEn: "Type 2 diabetes mellitus",
+        nameTh: "เบาหวานชนิดที่ 2",
+        category: "Endocrine, nutritional and metabolic diseases",
+        categoryTh: "โรคต่อมไร้ท่อ โภชนาการ และเมแทบอลิซึม",
+        description: "A form of diabetes mellitus that is characterized by insulin resistance and relative insulin deficiency.",
+        descriptionTh: "รูปแบบของโรคเบาหวานที่มีลักษณะเป็นการต้านทานต่ออินซูลินและการขาดแคลนอินซูลินสัมพัทธ์",
+        symptoms: ["กระหายน้ำมาก", "ปัสสาวะบ่อย", "น้ำหนักลด", "เหนื่อยง่าย", "excessive thirst", "frequent urination", "weight loss", "fatigue"]
+    },
+    {
+        code: "I10",
+        version: "ICD-10",
+        nameEn: "Essential (primary) hypertension",
+        nameTh: "ความดันโลหิตสูงชนิดปฐมภูมิ",
+        category: "Diseases of the circulatory system",
+        categoryTh: "โรคของระบบไหลเวียนโลหิต",
+        description: "High blood pressure with no identifiable cause, also known as primary hypertension.",
+        descriptionTh: "ความดันโลหิตสูงที่ไม่ทราบสาเหตุที่แน่ชัด เรียกอีกอย่างว่าความดันโลหิตสูงชนิดปฐมภูมิ",
+        symptoms: ["ปวดหัว", "เวียนหัว", "หายใจหอบ", "หัวใจเต้นผิดปกติ", "headache", "dizziness", "shortness of breath", "irregular heartbeat"]
+    },
+    {
+        code: "J18.9",
+        version: "ICD-10",
+        nameEn: "Pneumonia, unspecified organism",
+        nameTh: "ปอดบวมที่ไม่ระบุเชื้อโรค",
+        category: "Diseases of the respiratory system",
+        categoryTh: "โรคของระบบหายใจ",
+        description: "Inflammation of the lungs caused by infection, with the causative organism unspecified.",
+        descriptionTh: "การอักเสบของปอดที่เกิดจากการติดเชื้อ โดยไม่ระบุชนิดของเชื้อโรคที่เป็นสาเหตุ",
+        symptoms: ["ไข้", "ไอมีเสมหะ", "หายใจลำบาก", "ปวดหน้าอก", "fever", "productive cough", "difficulty breathing", "chest pain"]
+    },
+    {
+        code: "G43.9",
+        version: "ICD-10",
+        nameEn: "Migraine, unspecified",
+        nameTh: "ไมเกรนที่ไม่ระบุ",
+        category: "Diseases of the nervous system",
+        categoryTh: "โรคของระบบประสาท",
+        description: "A neurological disorder characterized by recurrent headaches.",
+        descriptionTh: "ภาวะทางระบบประสาทที่มีลักษณะเป็นการปวดหัวแบบกำเริบ",
+        symptoms: ["ปวดหัวข้างเดียว", "คลื่นไส้", "อาเจียน", "แสงจ้า", "unilateral headache", "nausea", "vomiting", "light sensitivity"]
+    },
+    {
+        code: "U07.1",
+        version: "ICD-10",
+        nameEn: "COVID-19",
+        nameTh: "โควิด-19",
+        category: "Emergency use of U codes",
+        categoryTh: "การใช้รหัส U ในกรณีฉุกเฉิน",
+        description: "Coronavirus disease 2019 caused by SARS-CoV-2 virus.",
+        descriptionTh: "โรคไวรัสโคโรนา 2019 ที่เกิดจากไวรัส SARS-CoV-2",
+        symptoms: ["ไข้", "ไอแห้ง", "เหนื่อยง่าย", "เสียรสชาติกลิ่น", "fever", "dry cough", "fatigue", "loss of taste and smell"]
+    },
+    {
+        code: "C78.0",
+        version: "ICD-10",
+        nameEn: "Secondary malignant neoplasm of lung",
+        nameTh: "มะเร็งร้ายแรงลุกลามไปที่ปอด",
+        category: "Neoplasms",
+        categoryTh: "เนื้องอก",
+        description: "Cancer that has spread to the lungs from another part of the body.",
+        descriptionTh: "มะเร็งที่แพร่กระจายมายังปอดจากส่วนอื่นของร่างกาย",
+        symptoms: ["ไอเรื้อรัง", "เสมหะมีเลือด", "หายใจลำบาก", "ปวดหน้าอก", "chronic cough", "bloody sputum", "shortness of breath", "chest pain"]
+    },
+    {
+        code: "250.00",
+        version: "ICD-9",
+        nameEn: "Diabetes mellitus without mention of complication, type II",
+        nameTh: "เบาหวานชนิดที่ 2 ไม่มีภาวะแทรกซ้อน",
+        category: "Endocrine, nutritional and metabolic diseases",
+        categoryTh: "โรคต่อมไร้ท่อ โภชนาการ และเมแทบอลิซึม",
+        description: "Type 2 diabetes without complications.",
+        descriptionTh: "เบาหวานชนิดที่ 2 ที่ไม่มีภาวะแทรกซ้อน",
+        symptoms: ["กระหายน้ำมาก", "ปัสสาวะบ่อย", "น้ำหนักลด", "เหนื่อยง่าย", "excessive thirst", "frequent urination", "weight loss", "fatigue"]
+    },
+    {
+        code: "401.9",
+        version: "ICD-9",
+        nameEn: "Unspecified essential hypertension",
+        nameTh: "ความดันโลหิตสูงชนิดปฐมภูมิที่ไม่ระบุ",
+        category: "Diseases of the circulatory system",
+        categoryTh: "โรคของระบบไหลเวียนโลหิต",
+        description: "Essential hypertension without specification.",
+        descriptionTh: "ความดันโลหิตสูงชนิดปฐมภูมิที่ไม่มีการระบุเฉพาะ",
+        symptoms: ["ปวดหัว", "เวียนหัว", "หายใจหอบ", "หัวใจเต้นผิดปกติ", "headache", "dizziness", "shortness of breath", "irregular heartbeat"]
+    }
+];
+
+let currentFilter = 'all';
+let currentSort = 'relevance';
+let searchResults = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('searchInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchICD();
+        }
+    });
+
+    // แสดงคำแนะนำขณะพิมพ์
+    document.getElementById('searchInput').addEventListener('input', function() {
+        if (this.value.length >= 2) {
+            showQuickSuggestions(this.value);
+        } else {
+            hideSuggestions();
+        }
+    });
+
+    // เรียกหาผลลัพธ์เมื่อเริ่มใช้ (ถ้ามีค่าในช่อง input)
+    if(document.getElementById('searchInput').value.trim() !== '') {
+        searchICD();
+    }
+});
+
+function setFilter(filter) {
+    currentFilter = filter;
+    // เปลี่ยนสถานะแท็บ
+    document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelector(`.filter-tab[data-filter="${filter}"]`).classList.add('active');
+    // ค้นหาใหม่
+    if (document.getElementById('searchInput').value.trim() !== '') {
+        searchICD();
+    } else {
+        clearResults();
+    }
+}
+
+function searchSuggestion(query) {
+    document.getElementById('searchInput').value = query;
+    hideSuggestions();
+    searchICD();
+}
+
+function searchICD() {
+    const query = document.getElementById('searchInput').value.trim().toLowerCase();
+    if (!query) {
+        clearResults();
+        return;
+    }
+
+    showLoading();
+
+    // เลียนแบบดีเลย์แบบ API จริง
+    setTimeout(() => {
+        performSearch(query);
+    }, 300);
+}
+
+function performSearch(query) {
+    let results = [];
+    const searchTerms = query.split(' ').filter(t => t);
+
+    icdDatabase.forEach(item => {
+        let relevanceScore = 0;
+
+        searchTerms.forEach(term => {
+            if (item.code.toLowerCase().includes(term)) relevanceScore += 10;
+            if (item.nameEn.toLowerCase().includes(term)) relevanceScore += 5;
+            if (item.nameTh.toLowerCase().includes(term)) relevanceScore += 8;
+            if (item.category.toLowerCase().includes(term) || item.categoryTh.toLowerCase().includes(term)) relevanceScore += 3;
+            if (item.symptoms.some(sym => sym.toLowerCase().includes(term))) relevanceScore += 2;
+        });
+
+        // กรองตาม filter
+        if (
+            currentFilter === 'all' ||
+            (currentFilter === 'icd10' && item.version === 'ICD-10') ||
+            (currentFilter === 'icd9' && item.version === 'ICD-9') ||
+            (currentFilter === 'symptoms' && item.symptoms.some(sym => searchTerms.some(term => sym.toLowerCase().includes(term)))) ||
+            (currentFilter === 'categories' && searchTerms.some(term => item.category.toLowerCase().includes(term) || item.categoryTh.toLowerCase().includes(term)))
+        ) {
+            if (relevanceScore > 0) {
+                results.push({ item, relevanceScore });
+            }
+        }
+    });
+
+    searchResults = results;
+    sortResults(currentSort);
+}
+
+function sortResults(criteria) {
+    currentSort = criteria;
+
+    if (criteria === 'relevance') {
+        searchResults.sort((a, b) => b.relevanceScore - a.relevanceScore);
+    } else if (criteria === 'code') {
+        searchResults.sort((a, b) => a.item.code.localeCompare(b.item.code));
+    } else if (criteria === 'name') {
+        searchResults.sort((a, b) => a.item.nameEn.localeCompare(b.item.nameEn));
+    }
+
+    renderResults();
+    updateSortButtons();
+}
+
+function updateSortButtons() {
+    document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
+    if (currentSort === 'relevance') {
+        document.querySelector('.sort-btn:nth-child(2)').classList.add('active'); // ความเกี่ยวข้อง
+    } else if (currentSort === 'code') {
+        document.querySelector('.sort-btn:nth-child(3)').classList.add('active'); // รหัส ICD
+    } else if (currentSort === 'name') {
+        document.querySelector('.sort-btn:nth-child(4)').classList.add('active'); // ชื่อโรค
+    }
+}
+
+function renderResults() {
+    const resultsSection = document.getElementById('resultsSection');
+    const resultsCount = document.getElementById('resultsCount');
+    const searchResultsDiv = document.getElementById('searchResults');
+
+    if (searchResults.length === 0) {
+        resultsCount.textContent = 'ไม่พบผลลัพธ์';
+        searchResultsDiv.innerHTML = `
+            <div class="no-results">
+                <i class="fas fa-search"></i>
+                <p>ไม่พบข้อมูลที่ตรงกับคำค้นของคุณ</p>
+            </div>
+        `;
+        resultsSection.style.display = 'block';
+        return;
+    }
+
+    resultsCount.textContent = `พบผลลัพธ์ ${searchResults.length} รายการ`;
+
+    let html = '';
+    searchResults.forEach(({ item }) => {
+        html += `
+            <div class="result-item fade-in">
+                <div class="icd-code">
+                    ${item.code}
+                    <span class="icd-version">${item.version}</span>
+                    <button class="copy-code" title="คัดลอกรหัส" onclick="copyToClipboard('${item.code}')">
+                        <i class="fas fa-copy"></i> คัดลอก
+                    </button>
+                </div>
+                <div class="disease-name-en">${item.nameEn}</div>
+                <div class="disease-name-th">${item.nameTh}</div>
+                <div class="disease-category">${item.categoryTh}</div>
+                <div class="disease-description">${item.descriptionTh}</div>
+                <div class="related-symptoms">
+                    <h4>อาการที่เกี่ยวข้อง</h4>
+                    <div class="symptoms-list">
+                        ${item.symptoms.map(sym => `<span class="symptom-tag">${sym}</span>`).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    searchResultsDiv.innerHTML = html;
+    resultsSection.style.display = 'block';
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert(`คัดลอกรหัส ICD: ${text}`);
+    }).catch(() => {
+        alert('ไม่สามารถคัดลอกรหัสได้ โปรดลองอีกครั้ง');
+    });
+}
+
+function showLoading() {
+    const resultsSection = document.getElementById('resultsSection');
+    const resultsCount = document.getElementById('resultsCount');
+    const searchResultsDiv = document.getElementById('searchResults');
+
+    resultsCount.textContent = 'กำลังค้นหา...';
+    searchResultsDiv.innerHTML = `
+        <div class="loading">
+            <i class="fas fa-spinner"></i><br>
+            กำลังโหลดข้อมูล...
+        </div>
+    `;
+    resultsSection.style.display = 'block';
+}
+
+function clearResults() {
+    const resultsSection = document.getElementById('resultsSection');
+    const resultsCount = document.getElementById('resultsCount');
+    const searchResultsDiv = document.getElementById('searchResults');
+
+    resultsCount.textContent = 'พบผลลัพธ์ 0 รายการ';
+    searchResultsDiv.innerHTML = '';
+    resultsSection.style.display = 'none';
+}
+
+function showQuickSuggestions(value) {
+    const suggestionContainer = document.querySelector('.search-suggestions');
+    const valLower = value.toLowerCase();
+
+    const suggestions = icdDatabase.filter(item => 
+        item.nameTh.toLowerCase().includes(valLower) ||
+        item.nameEn.toLowerCase().includes(valLower) ||
+        item.code.toLowerCase().includes(valLower)
+    ).slice(0, 5);
+    
+    if (suggestions.length === 0) {
+        suggestionContainer.style.display = 'none';
+        return;
+    }
+
+    suggestionContainer.style.display = 'grid';
+    suggestionContainer.innerHTML = suggestions.map(item => 
+        `<div class="suggestion-item" onclick="searchSuggestion('${item.nameTh}')">
+            <i class="fas fa-search"></i> ${item.nameTh} (${item.code})
+        </div>`
+    ).join('');
+}
+
+function hideSuggestions() {
+    const suggestionContainer = document.querySelector('.search-suggestions');
+    suggestionContainer.style.display = 'grid'; // หากต้องการแอบซ่อนจริงๆ ให้เปลี่ยนเป็น 'none'
+}
+
+            }
+        ];
+
+        let currentFilter = 'all';
+        let currentSort = 'relevance';
+        let searchResults = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('searchInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchICD();
+                }
+            });
+
+            // Add input event for real-time search suggestions
+            document.getElementById('searchInput').addEventListener('input', function() {
+                if (this.value.length >= 2) {
+                    showQuickSuggestions(this.value);
+                }
+            });
+        });
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            
+            // Update active tab
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+            
+            // Re-search with new filter
+            if (document.getElementById('searchInput').value) {
+                searchICD();
+            }
+        }
+
+        function searchSuggestion(query) {
+            document.getElementById('searchInput').value = query;
+            searchICD();
+        }
+
+        function searchICD() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            if (!query) return;
+
+            // Show loading
+            showLoading();
+
+            // Simulate API delay
+            setTimeout(() => {
+                performSearch(query);
+            }, 500);
+        }
+
+        function performSearch(query) {
+            let results = [];
+
+            // Search in database
+            icdDatabase.forEach(item => {
+                let relevanceScore = 0;
+                const searchTerms = query.split(' ');
+
+                searchTerms.forEach(term => {
+                    // Check code match
+                    if (item.code.toLowerCase().includes(term)) {
+                        relevanceScore += 10;
+                    }
+
+                    // Check English name
+                    if (item
